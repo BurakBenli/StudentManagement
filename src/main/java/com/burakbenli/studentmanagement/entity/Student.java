@@ -1,11 +1,12 @@
 package com.burakbenli.studentmanagement.entity;
 
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import javax.persistence.*;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -13,11 +14,12 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
+@JsonIgnoreProperties({"hibernateLazyInitializer","handler","lectures"})
 public class Student {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name="ID")
+    @Column(name="id")
     private Long id;
 
     @Column(unique = true,name = "securityNumber")
@@ -34,6 +36,7 @@ public class Student {
 
     @Column(name="updatedAt")
     private OffsetDateTime updatedAt;
+
 
     @ManyToMany(mappedBy = "students",cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<Lecture> lectures;

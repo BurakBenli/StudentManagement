@@ -5,8 +5,11 @@ import com.burakbenli.studentmanagement.entity.Lecture;
 import com.burakbenli.studentmanagement.entity.Student;
 import com.burakbenli.studentmanagement.repository.LectureRepocitory;
 import com.burakbenli.studentmanagement.repository.StudentRepository;
+import com.burakbenli.studentmanagement.services.StudentService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
-import java.time.OffsetDateTime;
+import javax.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,91 +21,67 @@ public class StudentController {
     private final StudentRepository studentRepository;
 
     private final LectureRepocitory lectureRepocitory;
-    public StudentController(StudentRepository studentRepository,LectureRepocitory lectureRepocitory) {
+
+    private final StudentService studentService;
+
+    private static final Logger logger = LoggerFactory.getLogger(LectureController.class);
+
+    public StudentController(StudentRepository studentRepository,LectureRepocitory lectureRepocitory,StudentService studentService) {
         this.studentRepository = studentRepository;
         this.lectureRepocitory = lectureRepocitory;
+        this.studentService = studentService;
     }
 
 
 
     @GetMapping("/{id}")
     public Optional<Student> getStudentById(@PathVariable(value = "id") Long id) {
-        return studentRepository.findById(id);
+        logger.info(id+" li ogrencinin bilgilerinin getirilmesi");
+        return studentService.getStudentById(id);
     }
 
     @GetMapping("/allStudent")
     public List<Student> getAllStudent() {
-        return studentRepository.findAll();
+        logger.info("Bütün Ogrencilerin Getirilmesi");
+        return studentService.getAllStudent();
     }
 
     @PostMapping("")
     public Student createStudent(@RequestBody Student studentRequest) throws Exception {
-     Student student = studentRepository.findStudentBySecurityNumber(studentRequest.getSecurityNumber());
-     if (student != null){
-         throw new Exception("Ogrenci sistemde kayıtlıdır");
-     }
-     studentRequest.setCreatedAt(OffsetDateTime.now());
-     studentRequest.setUpdatedAt(OffsetDateTime.now());
-     return studentRepository.save(studentRequest);
+     logger.info(studentRequest.getFirstName()+" " + studentRequest.getLastName() + "adlı ogrencinin kayıt işlemi yapılmaktadır");
+     return studentService.createStudent(studentRequest);
     }
 
     @PutMapping("/{id}")
     public Student updateStudent(@PathVariable(value = "id") Long id, @RequestBody Student studentRequest)
             throws Exception {
-        Optional<Student> studentOption = studentRepository.findById(id);
-        if (!studentOption.isPresent()) {
-            throw new Exception("Kayıt Bulunamadı");
-        }
-        OffsetDateTime offsetdatetime = OffsetDateTime.now();
-        return studentOption.map(student ->{
-            student.setFirstName(studentRequest.getFirstName());
-            student.setLastName(studentRequest.getLastName());
-            student.setUpdatedAt(offsetdatetime);
-            return studentRepository.save(student);
-        }).get();
+        return studentService.updateStudent(id,studentRequest);
 
     }
 
     @DeleteMapping("/delete/{id}")
     public void deleteStudent(@PathVariable(value = "id") Long id) throws Exception {
-        studentRepository.deleteById(id);
+        logger.info(id+" kayıt silme isleminin yapılması");
+        studentService.deleteStudent(id);
     }
 
     @DeleteMapping("/{id}/deleteLecture/{lectureId}")
     public void deleteLectureByStudent(@PathVariable(value = "id") Long id,@PathVariable(value = "lectureId") Long lectureId) throws Exception {
-        Optional<Student> studentOptional = studentRepository.findById(id);
-        studentOptional.ifPresent(student -> {
-          Optional<Lecture> foundLecture =  student.getLectures().stream().filter(lecture -> lecture.getId().equals(lectureId)).findFirst();
-          student.getLectures().remove(foundLecture);
-          studentRepository.save(student);
-        });
+        studentService.deleteLectureByStudent(id,lectureId);
 
     }
 
     @PostMapping("/{id}/addLecture/{lectureId}")
+    @Transactional
     public void addLectureByStudent(@PathVariable(value = "id") Long id,@PathVariable(value = "lectureId") Long lectureId) throws RuntimeException{
-        Optional<Student> studentOptional = studentRepository.findById(id);
-        studentOptional.ifPresent(student -> {
-            Lecture lecture = lectureRepocitory.findById(lectureId).get();
-            if (lecture.getCurrentStudentNumber()<lecture.getMaxStudentNumber()){
-                lecture.setCurrentStudentNumber(lecture.getCurrentStudentNumber()+1);
-                student.getLectures().add(lecture);
-                studentRepository.save(student);
-            }else{
-                throw new RuntimeException("Boş Kontenjan kalmadı");
-            }
-
-        });
+        studentService.addLectureByStudent(id,lectureId);
     }
 
     @GetMapping("/lecturesByStudents/{id}")
     public List<Lecture> getAllLectureByStudent(@PathVariable(value = "id") Long id) {
-      Optional<Student>  student = studentRepository.findById(id);
-      return student.map(student1 -> student1.getLectures()).get();
-
+      logger.info(" Ogrenci idlerine göre derslerin getirilmesi islemi gerceklesecektir ");
+      return studentService.getAllLectureByStudent(id);
     }
-
-
 
 
  }
